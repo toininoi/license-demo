@@ -2,38 +2,53 @@
 
 This guide details how to expose, scrape, and visualize Prometheus metrics across a containerized TIBCO messaging stack (FTL, EMS, and Rendezvous), with a specific focus on tracking software license expiration times.
 
+
+
 ## 🏗️ Architecture & Port Mapping
 
-The following diagram illustrates how the Docker containers communicate and how Prometheus scrapes the metrics from each specific port.
+The following diagram illustrates how the Docker containers communicate and how Prometheus scrapes the metrics from each specific port within the Docker network.
 
 ```mermaid
 graph LR
-    %% Monitoring Stack
-    subgraph Monitoring[Monitoring Stack]
-        Grafana["Grafana<br/>Port: 3000"]
-        Prometheus["Prometheus<br/>Port: 9090"]
-    end
+    User["👤 User (Web Browser)"]
 
-    %% TIBCO FTL / EMS Cluster
-    subgraph TibcoCluster[TIBCO FTL & EMS Cluster]
-        FTL1["ftlserver1<br/>FTL :8585 | EMS :7220"]
-        FTL2["ftlserver2<br/>FTL :8585 | EMS :7220"]
-        FTL3["ftlserver3<br/>FTL :8585 | EMS :7220"]
-    end
+    subgraph DockerHost[Docker Host]
+        subgraph DockerNetwork[tibco-network]
+            
+            %% Monitoring Stack
+            subgraph Monitoring[Monitoring Stack]
+                Grafana["Grafana<br/>Internal: 3000 | Exposed: 3000"]
+                Prometheus["Prometheus<br/>Port: 9090"]
+            end
 
-    %% TIBCO Rendezvous
-    subgraph TibcoRV[TIBCO Rendezvous]
-        RVL["rv-listener<br/>RVD HTTP :7580"]
-        RVS["rv-sender<br/>RVD HTTP :7580"]
+            %% TIBCO FTL / EMS Cluster
+            subgraph TibcoCluster[TIBCO FTL & EMS Cluster]
+                FTL1["ftlserver1<br/>FTL :8585 | EMS :7220"]
+                FTL2["ftlserver2<br/>FTL :8585 | EMS :7220"]
+                FTL3["ftlserver3<br/>FTL :8585 | EMS :7220"]
+            end
+
+            %% TIBCO Rendezvous
+            subgraph TibcoRV[TIBCO Rendezvous]
+                RVL["rv-listener<br/>RVD HTTP :7580"]
+                RVS["rv-sender<br/>RVD HTTP :7580"]
+            end
+            
+        end
     end
 
     %% Connections
+    User -->|http://localhost:3000| Grafana
     Grafana -->|Queries| Prometheus
     Prometheus -.->|Scrapes /metrics| FTL1
     Prometheus -.->|Scrapes /metrics| FTL2
     Prometheus -.->|Scrapes /metrics| FTL3
     Prometheus -.->|Scrapes /metrics| RVL
     Prometheus -.->|Scrapes /metrics| RVS
+
+    %% Styling for Subgraphs
+    style DockerHost fill:#f0f8ff,stroke:#2563eb,stroke-width:2px,color:#1e293b
+    style DockerNetwork fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,stroke-dasharray: 5 5,color:#14532d
 ```
 
 ## 🔌 1. Exposing `/metrics` in Docker Compose
