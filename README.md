@@ -2,7 +2,39 @@
 
 This guide details how to expose, scrape, and visualize Prometheus metrics across a containerized TIBCO messaging stack (FTL, EMS, and Rendezvous), with a specific focus on tracking software license expiration times.
 
+## Architecture & Port Mapping
 
+The following diagram illustrates how the Docker containers communicate and how Prometheus scrapes the metrics from each specific port.
+
+```mermaid
+graph LR
+    %% Monitoring Stack
+    subgraph Monitoring[Monitoring Stack]
+        Grafana["Grafana<br/>Port: 3000"]
+        Prometheus["Prometheus<br/>Port: 9090"]
+    end
+
+    %% TIBCO FTL / EMS Cluster
+    subgraph TibcoCluster[TIBCO FTL & EMS Cluster]
+        FTL1["ftlserver1<br/>FTL :8585 | EMS :7220"]
+        FTL2["ftlserver2<br/>FTL :8585 | EMS :7220"]
+        FTL3["ftlserver3<br/>FTL :8585 | EMS :7220"]
+    end
+
+    %% TIBCO Rendezvous
+    subgraph TibcoRV[TIBCO Rendezvous]
+        RVL["rv-listener<br/>RVD HTTP :7580"]
+        RVS["rv-sender<br/>RVD HTTP :7580"]
+    end
+
+    %% Connections
+    Grafana -->|Queries| Prometheus
+    Prometheus -.->|Scrapes /metrics| FTL1
+    Prometheus -.->|Scrapes /metrics| FTL2
+    Prometheus -.->|Scrapes /metrics| FTL3
+    Prometheus -.->|Scrapes /metrics| RVL
+    Prometheus -.->|Scrapes /metrics| RVS
+```
 
 ## 1. Exposing `/metrics` in Docker Compose
 
@@ -28,7 +60,9 @@ command: >
   bash -c "rvd -listen tcp:7500 -http 7580 & sleep 5; while true; do tibrvsend -service 7500 -network ';' -daemon tcp:7500 TEST.SUBJECT 'Ping'; sleep 10; done"
 ```
 
-### Requirements to start docker compose
+## 2. Test docker compose 
+
+### Requirements 
 * EMS,FTL and RV images built
 * Valid and not expired license file 
 
