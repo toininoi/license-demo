@@ -26,3 +26,22 @@ RV exposes metrics via the Rendezvous Daemon (`rvd`) HTTP administration interfa
 ```yaml
 command: >
   bash -c "rvd -listen tcp:7500 -http 7580 & sleep 5; while true; do tibrvsend -service 7500 -network ';' -daemon tcp:7500 TEST.SUBJECT 'Ping'; sleep 10; done"
+```
+
+### Requirements to start docker compose
+* EMS,FTL and RV images built
+* Valid and not expired license file 
+
+### Start all containers
+```bash
+docker-compose -f docker-compose.yml up -d
+```
+
+
+`license-dashboard.json` delivered as sample to be imported to Grafana after the start of all containers 
+
+### Stop all containers
+```bash
+docker-compose -f docker-compose.yml down
+```
+
