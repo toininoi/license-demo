@@ -89,9 +89,11 @@ docker-compose -f docker-compose.yml up -d
 
 *Note: `license-dashboard.json` is delivered as a sample to be imported to Grafana after the start of all containers.*
 
+
+
+![Screen](./img/dashboard.png)
+
 ### 🛑 Stop all containers
 ```bash
 docker-compose -f docker-compose.yml down
 ```
-
-![Screen](./img/dashboard.png)
