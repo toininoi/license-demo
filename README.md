@@ -79,7 +79,8 @@ command: >
 
 ### 📋 Requirements 
 * EMS,FTL and RV images built
-* Valid and not expired license file 
+* FTL yaml and EMS json config files 
+* Valid and not expired license file
 
 ### ▶️ Start all containers
 ```bash
