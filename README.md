@@ -9,16 +9,6 @@ This guide details how to expose, scrape, and visualize Prometheus metrics acros
 The following diagram illustrates how the Docker containers communicate and how Prometheus scrapes the metrics from each specific port within the Docker network.
 
 ```mermaid
-%%{init: {
-  'theme': 'base', 
-  'look': 'handDrawn', 
-  'themeVariables': { 
-    'fontFamily': 'Comic Sans MS, cursive',
-    'primaryColor': '#ffffff',
-    'mainBkg': '#ffffff',
-    'lineColor': '#444444'
-  }
-}}%%
 
 graph LR
     User["👤 User (Web Browser)"]
