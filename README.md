@@ -44,7 +44,7 @@ graph RL
             
 
             %% Messaging
-            subgraph TibcoCluster[Messaging]
+            subgraph TibcoCluster[Containers]
                 FTL1["ftlserver1<br/>FTL: 8585 | EMS: 7220"]
                 FTL2["ftlserver2<br/>FTL: 8585 | EMS: 7220"]
                 FTL3["ftlserver3<br/>FTL: 8585 | EMS: 7220"]
