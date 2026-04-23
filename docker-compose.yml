@@ -85,21 +85,52 @@ services:
       - tibco-network
     depends_on:
       - rv-listener
+      
+  bwce_service:
+    image: my-bw-app:6.12.2
+    container_name: my-bw-app-6.12.2
+    networks:
+      - tibco-network
+    environment:
+      - BW_PROFILE=token
+      - LICENSE_SOURCE=/data/license
+      # 1. Point to the base URL only (no /api/v1/... path)
+      # 2. Removed the http/protobuf override since BWCE forces gRPC
+      - BW_JAVA_OPTS=-Dbw.engine.opentelemetry.enable=true -Dbw.engine.opentelemetry.span.exporter.endpoint=http://otel_collector:4317 -Dbw.engine.opentelemetry.metric.enable=true -Dbw.engine.opentelemetry.metric.exporter.endpoint=http://otel_collector:4317
+    volumes:
+      - C:/Users/dmassimi/containers/resources/addons/license:/data/license:ro
+    ports:
+      - "8080:8080"
+
+  otel_collector:
+    image: otel/opentelemetry-collector-contrib:0.87.0
+    container_name: otel_collector
+    command: ["--config=/etc/otelcol-config.yaml"]
+    volumes:
+      - ./otelcol-config.yaml:/etc/otelcol-config.yaml:ro
+    ports:
+      - "4318:4318"
+      - "4317:4317"
+    networks:
+      - tibco-network
+    depends_on:
+      - prometheus
 
   # =========================================
   # Monitoring Stack
   # =========================================
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.48.0
     container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "9090:9090"
-    volumes:
-      # Mount the configuration file from your host to the container
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - tibco-network
-    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest

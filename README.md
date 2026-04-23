@@ -1,15 +1,13 @@
-# 📊 TIBCO Messaging Monitoring: FTL, EMS, and RV
+# 📊 TIBCO Monitoring: FTL, EMS, RV, and BWCE
 
-This guide details how to expose, scrape, and visualize Prometheus metrics across a containerized TIBCO messaging stack (FTL, EMS, and Rendezvous), with a specific focus on tracking software license expiration times.
-
-
+This guide details how to expose, scrape, and visualize Prometheus metrics across a containerized TIBCO stack, including Messaging (FTL, EMS, RV) and Cloud Software Group BusinessWorks Container Edition (BWCE).
 
 ## 🏗️ Architecture & Port Mapping
 
-The following diagram illustrates how the Docker containers communicate and how Prometheus scrapes the metrics from each specific port within the Docker network.
+The diagram below shows the monitoring flow. Messaging components are **scraped** directly by Prometheus, while BWCE **pushes** metrics to the OTel Collector via gRPC, which is then scraped by Prometheus.
 
 ```mermaid
-graph LR
+graph RL
     User["👤 User (Web Browser)"]
 
     subgraph DockerHost[Docker Host]
@@ -17,21 +15,27 @@ graph LR
             
             %% Monitoring Stack
             subgraph Monitoring[Monitoring Stack]
-                Grafana["Grafana<br/>Internal: 3000 | Exposed: 3000"]
+                Grafana["Grafana<br/>Port: 3000"]
                 Prometheus["Prometheus<br/>Port: 9090"]
+                OTEL["OTel Collector<br/>gRPC: 4317 | Scrape: 8889"]
+            end
+
+            %% BWCE
+            subgraph BW Container[ BW Container]
+                BWCE["bwce_service<br/>(OTLP Push)"]
             end
 
             %% TIBCO FTL / EMS Cluster
             subgraph TibcoCluster[TIBCO FTL & EMS Cluster]
-                FTL1["ftlserver1<br/>FTL :8585 | EMS :7220"]
-                FTL2["ftlserver2<br/>FTL :8585 | EMS :7220"]
-                FTL3["ftlserver3<br/>FTL :8585 | EMS :7220"]
+                FTL1["ftlserver1<br/>FTL: 8585 | EMS: 7220"]
+                FTL2["ftlserver2<br/>FTL: 8585 | EMS: 7220"]
+                FTL3["ftlserver3<br/>FTL: 8585 | EMS: 7220"]
             end
 
             %% TIBCO Rendezvous
             subgraph TibcoRV[TIBCO Rendezvous]
-                RVL["rv-listener<br/>RVD HTTP :7580"]
-                RVS["rv-sender<br/>RVD HTTP :7580"]
+                RVL["rv-listener<br/>RVD HTTP: 7580"]
+                RVS["rv-sender<br/>RVD HTTP: 7580"]
             end
             
         end
@@ -40,80 +44,81 @@ graph LR
     %% Connections
     User -->|http://localhost:3000| Grafana
     Grafana -->|Queries| Prometheus
-    Prometheus -.->|Scrapes /metrics| FTL1
-    Prometheus -.->|Scrapes /metrics| FTL2
-    Prometheus -.->|Scrapes /metrics| FTL3
-    Prometheus -.->|Scrapes /metrics| RVL
-    Prometheus -.->|Scrapes /metrics| RVS
+    
+    %% Push Flow
+    BWCE -->|OTLP gRPC:4317| OTEL
+    
+    %% Pull/Scrape Flow
+    Prometheus -.->|Scrapes :8889| OTEL
+    Prometheus -.->|Scrapes :8585/7220| FTL1
+    Prometheus -.->|Scrapes :8585/7220| FTL2
+    Prometheus -.->|Scrapes :8585/7220| FTL3
+    Prometheus -.->|Scrapes :7580| RVL
+    Prometheus -.->|Scrapes :7580| RVS
 
-    %% Styling for Subgraphs
-    style DockerHost fill:#f0f8ff,stroke:#2563eb,stroke-width:2px,color:#1e293b
-    style DockerNetwork fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,stroke-dasharray: 5 5,color:#14532d
+    %% Styling
+    style DockerHost fill:#f0f8ff,stroke:#2563eb,stroke-width:2px
+    style DockerNetwork fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,stroke-dasharray: 5 5
+    
 ```
 
-## 🔌 1. Exposing `/metrics` in Docker Compose
+The monitoring flow is designed so that Messaging components are **scraped** directly by Prometheus, while BWCE **pushes** metrics to the OTel Collector via gRPC, which is then scraped by Prometheus.
 
-Each TIBCO component handles Prometheus metrics slightly differently. To expose them, your `docker-compose.yml` must configure the correct flags and ports for each service.
+## 🔌 1. Exposing `/metrics` Configuration
+
+### ⚙️ TIBCO BWCE (OTEL Collector)
+BWCE uses the OpenTelemetry (OTLP) gRPC exporter to push metrics to a central collector.
+* **Environment Variable:**
+  BW_JAVA_OPTS=-Dbw.engine.opentelemetry.enable=true -Dbw.engine.opentelemetry.metric.enable=true -Dbw.engine.opentelemetry.metric.exporter.endpoint=http://otel_collector:4317
+  
+* **Collector Logic:** The OTel Collector receives gRPC traffic on `4317` and exposes an HTTP scrape endpoint for Prometheus on port `8889`.
 
 ### ✉️ TIBCO EMS (10.4+)
-EMS exposes its metrics via the monitor port.
-* **Flag:** `-monitor_listen http://<hostname>:7220` (Configured in your `tibftlserver_cluster.yaml` under the `tibemsd` section).
+EMS metrics are exposed via the monitor port.
+* **Flag:** `-monitor_listen http://<hostname>:7220` (Exposed as standard Prometheus text format).
 * **Compose Port:** `7220`
 
 ### ⚡ TIBCO FTL (7.2+)
-FTL natively exposes Prometheus metrics on its Realm Server port. No special flags are needed, just ensure the port is accessible.
+Natively exposed on the Realm Server port. No extra configuration required beyond ensuring connectivity.
 * **Compose Port:** `8585`
 
-### 📡 TIBCO Rendezvous (RV 8.8+)
-RV exposes metrics via the Rendezvous Daemon (`rvd`) HTTP administration interface. Client tools (`tibrvsend`/`tibrvlisten`) do not expose metrics directly; you must start the daemon explicitly with the HTTP flag.
-* **Flag:** Start the daemon using `rvd -http 7580 &` before running your client commands.
+### 📡 TIBCO Rendezvous (RV 9.0+)
+Metrics are exposed via the `rvd` HTTP administration interface.
+* **Flag:** `rvd -http 7580 &`
 * **Compose Port:** `7580`
 
-**Example RV Sender Compose Command:**
-```yaml
-command: >
-  bash -c "rvd -listen tcp:7500 -http 7580 & sleep 5; while true; do tibrvsend -service 7500 -network ';' -daemon tcp:7500 TEST.SUBJECT 'Ping'; sleep 10; done"
-```
+---
 
-## 🧪 2. Test docker compose 
+## 📈 2. Dashboard PromQL Rules
 
-### 📋 Requirements 
-* EMS,FTL and RV images built
-* FTL yaml and EMS json config files 
-* Valid and not expired license file
+To ensure a clean visualization without duplicate rows for the same pod, use the `max by` aggregation.
+
+### 🏢 BWCE License Expiration (Stat Panel)
+For BWCE, use a **Stat Panel** to track license longevity.
+* **Query:**
+  max by (InstanceName) (app_metrics_com_tibco_bw_license_expiration_seconds / 86400)
+  
+* **Panel Configuration:**
+  * **Calculation:** `Last` (Crucial to show only the most recent data point).
+  * **Text Mode:** `Value and name` (Displays the Instance/App name alongside the days).
+  * **Legend/Display Name:** `{{InstanceName}}` (Mapped via Query Legend or Standard Options).
+
+### ✉️ EMS/FTL/RV Expiration
+| Component | PromQL Query |
+| :--- | :--- |
+| **EMS** | max by (instance) (tibco_ems_server_license_expiration_seconds) |
+| **FTL** | max by (instance) (tibco_ftl_server_license_expiration_seconds) |
+| **RV** | max by (instance) (tibco_rv_lease_expiration_seconds) |
+
+---
+
+## 🧪 3. Running the Stack
 
 ### ▶️ Start all containers
-```bash
-docker-compose -f docker-compose.yml up -d
-```
-
-
-*Note: `license-dashboard.json` is delivered as a sample to be imported to Grafana after the start of all containers.*
-
-### 📈 Dashboard PromQL Rules
-The imported dashboard visualizes the expiration metrics using specific PromQL queries. Because TIBCO attaches many internal labels (like ComponentID or RealmID) to a single metric, querying the raw metric name will result in duplicate dashboard rows.
-
-To fix this, the dashboard relies on the max by (instance) aggregation function to collapse the metrics cleanly down to one row per container.
-
-**TIBCO EMS License Expiration:**
-
-```bash
-max by (instance) (tibco_ems_server_license_expiration_seconds)
-```
-
-**TIBCO FTL License Expiration:**
-```bash
-max by (instance) (tibco_ftl_server_license_expiration_seconds)
-```
-
-**TIBCO Rendezvous Lease Expiration:**
-```bash
-max by (instance) (tibco_rv_lease_expiration_seconds)
-```
-
-![Screen](./img/dashboard.png)
+Ensure your `prometheus.yml` and `otelcol-config.yaml` are present in the directory.
+docker-compose up -d
 
 ### 🛑 Stop all containers
-```bash
-docker-compose -f docker-compose.yml down
-```
+docker-compose down
+
+![Screen](./img/dashboard.png)
