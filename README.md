@@ -1,4 +1,4 @@
-# 📊 TIBCO Monitoring: FTL, EMS, RV, and BWCE
+# 📊 TIBCO Monitoring: FTL, EMS, RV, and BW
 
 This guide details how to expose, scrape, and visualize Prometheus metrics across a containerized TIBCO stack, including Messaging (FTL, EMS, RV) and Cloud Software Group BusinessWorks Container Edition (BWCE).
 
@@ -112,24 +112,15 @@ Metrics are exposed via the `rvd` HTTP administration interface.
 
 ## 📈 2. Dashboard PromQL Rules
 
-To ensure a clean visualization without duplicate rows for the same pod, use the `max by` aggregation.
+Below the PromQL for all products
 
-### 🏢 BWCE License Expiration (Stat Panel)
-For BWCE, use a **Stat Panel** to track license longevity.
-* **Query:**
-  max by (InstanceName) (app_metrics_com_tibco_bw_license_expiration_seconds / 86400)
-  
-* **Panel Configuration:**
-  * **Calculation:** `Last` (Crucial to show only the most recent data point).
-  * **Text Mode:** `Value and name` (Displays the Instance/App name alongside the days).
-  * **Legend/Display Name:** `{{InstanceName}}` (Mapped via Query Legend or Standard Options).
-
-### ✉️ EMS/FTL/RV Expiration
+### ✉️ EMS/FTL/RV/BW Expiration
 | Component | PromQL Query |
 | :--- | :--- |
 | **EMS** | max by (instance) (tibco_ems_server_license_expiration_seconds) |
 | **FTL** | max by (instance) (tibco_ftl_server_license_expiration_seconds) |
 | **RV** | max by (instance) (tibco_rv_lease_expiration_seconds) |
+| **BW** | app_metrics_com_tibco_bw_license_expiration_seconds / 86400 |
 
 ---
 
@@ -137,9 +128,14 @@ For BWCE, use a **Stat Panel** to track license longevity.
 
 ### ▶️ Start all containers
 Ensure your `prometheus.yml` and `otelcol-config.yaml` are present in the directory.
+```bash
 docker-compose up -d
-
-### 🛑 Stop all containers
-docker-compose down
+```
 
 ![Screen](./img/dashboard.png)
+
+### 🛑 Stop all containers
+```bash
+docker-compose down
+```
+
