@@ -1,6 +1,13 @@
 # 📊 TIBCO Monitoring: FTL, EMS, RV, and BW
 
 This guide details how to expose, scrape, and visualize Prometheus metrics across a containerized TIBCO stack, including Messaging (FTL, EMS, RV) and Cloud Software Group BusinessWorks Container Edition (BWCE).
+### 🚀 Products Version
+| Component | Version |
+| :--- | :--- |
+| **EMS** | 10.4.1 |
+| **FTL** | 7.2 |
+| **RV** | 9.0 |
+| **BW** | 6.12 HF02 |
 
 ## 🏗️ Architecture & Port Mapping
 
