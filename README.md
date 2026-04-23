@@ -94,7 +94,7 @@ The monitoring flow is designed so that Messaging components are **scraped** dir
 
 ## 🔌 1. Exposing `/metrics` Configuration
 
-### ⚙️ TIBCO BWCE (OTEL Collector)
+### ⚙️ TIBCO BWCE (6.12 HF02+) using OTEL Collector
 BWCE uses the OpenTelemetry (OTLP) gRPC exporter to push metrics to a central collector.
 * **Environment Variable:**
   BW_JAVA_OPTS=-Dbw.engine.opentelemetry.enable=true -Dbw.engine.opentelemetry.metric.enable=true -Dbw.engine.opentelemetry.metric.exporter.endpoint=http://otel_collector:4317
