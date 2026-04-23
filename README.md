@@ -34,38 +34,40 @@ graph RL
             
             %% Monitoring Stack
             subgraph Monitoring[Monitoring Stack]
+
                 Grafana["Grafana<br/>Port: 3000"]
                 Prometheus["Prometheus<br/>Port: 9090"]
                 OTEL["OTel Collector<br/>gRPC: 4317 | Scrape: 8889"]
             end
 
             %% BWCE
-            subgraph BW Container[ BW Container]
-                BWCE["bwce_service<br/>(OTLP Push)"]
-            end
+            
 
-            %% TIBCO FTL / EMS Cluster
-            subgraph TibcoCluster[TIBCO FTL & EMS Cluster]
+            %% Messaging
+            subgraph TibcoCluster[Messaging]
                 FTL1["ftlserver1<br/>FTL: 8585 | EMS: 7220"]
                 FTL2["ftlserver2<br/>FTL: 8585 | EMS: 7220"]
                 FTL3["ftlserver3<br/>FTL: 8585 | EMS: 7220"]
-            end
-
-            %% TIBCO Rendezvous
-            subgraph TibcoRV[TIBCO Rendezvous]
                 RVL["rv-listener<br/>RVD HTTP: 7580"]
                 RVS["rv-sender<br/>RVD HTTP: 7580"]
+                BWCE["bwce_service<br/>(OTLP Push)"]
+                          
             end
+
+           
             
         end
     end
+
+
+    %% Push Flow
+    BWCE -->|OTLP gRPC:4317| OTEL
 
     %% Connections
     User -->|http://localhost:3000| Grafana
     Grafana -->|Queries| Prometheus
     
-    %% Push Flow
-    BWCE -->|OTLP gRPC:4317| OTEL
+
     
     %% Pull/Scrape Flow
     Prometheus -.->|Scrapes :8889| OTEL
