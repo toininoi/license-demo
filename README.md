@@ -7,6 +7,18 @@ This guide details how to expose, scrape, and visualize Prometheus metrics acros
 The diagram below shows the monitoring flow. Messaging components are **scraped** directly by Prometheus, while BWCE **pushes** metrics to the OTel Collector via gRPC, which is then scraped by Prometheus.
 
 ```mermaid
+%%{init: {
+  'theme': 'base', 
+  'look': 'handDrawn', 
+  'themeVariables': { 
+    'fontFamily': 'Comic Sans MS, cursive',
+    'primaryColor': '#ffffff',
+    'mainBkg': '#ffffff',
+    'lineColor': '#444444'
+  }
+}}%%
+
+%%{init: {'theme': 'neutral'}}%%
 graph RL
     User["👤 User (Web Browser)"]
 
@@ -59,7 +71,16 @@ graph RL
     %% Styling
     style DockerHost fill:#f0f8ff,stroke:#2563eb,stroke-width:2px
     style DockerNetwork fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,stroke-dasharray: 5 5
-    
+    style User fill:#a2d2ff,stroke:#0056b3,stroke-width:2px,rx:10,ry:10,color:#000
+    style Grafana fill:#d8f3dc,stroke:#2d6a4f,stroke-width:2px,rx:10,ry:10,color:#000
+    style Prometheus fill:#f96,stroke:#a33b00,stroke-width:3px,color:#000,font-weight:bold
+    style OTEL fill:#ffb703,stroke:#e85d04,stroke-width:2px,rx:10,ry:10,color:#000
+    style BWCE fill:#e6ccb2,stroke:#a68a64,stroke-width:2px,rx:10,ry:10,color:#000
+    style FTL1 fill:#ffcccc,stroke:#cc0000,stroke-width:2px,rx:10,ry:10,color:#000
+    style FTL2 fill:#ffcccc,stroke:#cc0000,stroke-width:2px,rx:10,ry:10,color:#000
+    style FTL3 fill:#ffcccc,stroke:#cc0000,stroke-width:2px,rx:10,ry:10,color:#000
+    style RVL fill:#9f9,stroke:#008000,stroke-width:3px,color:#000,font-weight:bold
+    style RVS fill:#9f9,stroke:#008000,stroke-width:3px,color:#000,font-weight:bold   
 ```
 
 The monitoring flow is designed so that Messaging components are **scraped** directly by Prometheus, while BWCE **pushes** metrics to the OTel Collector via gRPC, which is then scraped by Prometheus.
